@@ -1,0 +1,21 @@
+ansible_user: admin
+
+timezone: Etc/UTC
+sops_version: "3.10.2"
+
+# enforce working DNS on VMs
+resolver_dns_servers:
+  - 1.1.1.1
+  - 8.8.8.8
+
+komodo_core_image_tag: "2" # Docker image tag for Core + compose-periphery on mgmt
+komodo_version: "core" # keep systemd Periphery agents aligned to the running Core
+komodo_core_port: 9120
+komodo_periphery_port: 8120
+
+komodo_public_host: "komodo.home.example"
+komodo_public_url: "https://{{ komodo_public_host }}"
+
+# Periphery outbound mode — binary periphery on docker_hosts connects TO Core.
+# Auto-pins Core's Ed25519 public key on first connect (stored in ~/.komodo/keys/core.pub).
+komodo_core_address: "ws://10.20.0.50:{{ komodo_core_port }}"

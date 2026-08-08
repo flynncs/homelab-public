@@ -1,0 +1,104 @@
+---
+- name: Weekly rolling maintenance on homelab guests
+  hosts: baseline
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Install all available package updates
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        dpkg_options: force-confdef,force-confold
+      register: maintenance_upgrade
+
+    - name: Check whether the guest already requires a reboot
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: guest_reboot_required
+
+    - name: Reboot a changed guest or apply a pending reboot
+      ansible.builtin.reboot:
+        reboot_timeout: 900
+        post_reboot_delay: 10
+      when: (maintenance_force_reboot | default(false) | bool) or maintenance_upgrade.changed or guest_reboot_required.stat.exists
+
+    - name: Verify the operating system reached a usable state
+      ansible.builtin.command: systemctl is-system-running
+      register: system_state
+      changed_when: false
+      failed_when: system_state.stdout not in ['running', 'degraded']
+
+    - name: Verify Docker after maintenance
+      ansible.builtin.command: docker info
+      changed_when: false
+      when: inventory_hostname in groups['docker_hosts']
+
+    - name: Verify Komodo Periphery after maintenance
+      ansible.builtin.shell: |
+        uid="$(id -u komodo)"
+        runuser -u komodo -- env XDG_RUNTIME_DIR="/run/user/${uid}" \
+          systemctl --user is-active periphery.service
+      args:
+        executable: /bin/sh
+      changed_when: false
+      when: inventory_hostname in groups['docker_hosts']
+
+- import_playbook: komodo.yaml
+
+- name: Update and reboot Proxmox last
+  hosts: proxmox_hosts
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Install all available Proxmox package updates
+      ansible.builtin.apt:
+        update_cache: true
+        upgrade: dist
+        dpkg_options: force-confdef,force-confold
+      register: proxmox_upgrade
+
+    - name: Check whether Proxmox already requires a reboot
+      ansible.builtin.stat:
+        path: /var/run/reboot-required
+      register: proxmox_reboot_required
+
+    - name: Reboot Proxmox after an update or pending reboot
+      ansible.builtin.reboot:
+        reboot_timeout: 1200
+        post_reboot_delay: 30
+      when: (maintenance_force_reboot | default(false) | bool) or proxmox_upgrade.changed or proxmox_reboot_required.stat.exists
+
+    - name: Verify the Proxmox API is available
+      ansible.builtin.command: pvesh get /version --output-format json
+      changed_when: false
+
+- name: Verify all guests returned after Proxmox maintenance
+  hosts: baseline
+  gather_facts: false
+  become: true
+
+  tasks:
+    - name: Wait for the guest
+      ansible.builtin.wait_for_connection:
+        timeout: 900
+
+    - name: Verify Docker is available
+      ansible.builtin.command: docker info
+      changed_when: false
+      when: inventory_hostname in groups['docker_hosts']
+
+    - name: Verify Komodo Periphery is active
+      ansible.builtin.shell: |
+        uid="$(id -u komodo)"
+        runuser -u komodo -- env XDG_RUNTIME_DIR="/run/user/${uid}" \
+          systemctl --user is-active periphery.service
+      args:
+        executable: /bin/sh
+      changed_when: false
+      when: inventory_hostname in groups['docker_hosts']

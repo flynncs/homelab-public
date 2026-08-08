@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "gen:routes": "node scripts/gen-routes.js",
+    "check:routes": "node scripts/gen-routes.js --check"
+  },
+  "devDependencies": {
+    "yaml": "^2.8.1"
+  }
+}

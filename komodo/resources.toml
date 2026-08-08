@@ -1,0 +1,27 @@
+[[resource_sync]]
+name = "stacks"
+[resource_sync.config]
+git_account = "flynncs"
+repo = "flynncs/homelab-public"
+branch = "main"
+webhook_enabled = true
+resource_path = [
+  "komodo/resources.toml",
+  "stacks/edge/komodo.toml",
+  "stacks/arr/core/komodo.toml",
+  "stacks/arr/vpn-downloaders/komodo.toml",
+  "stacks/arr/usenet-downloaders/komodo.toml",
+  "stacks/arr/requests/komodo.toml",
+  "stacks/music/komodo.toml",
+  "stacks/auth/komodo.toml",
+  "stacks/bento/komodo.toml",
+  "stacks/tandoor/komodo.toml",
+  "stacks/norish/komodo.toml",
+  "stacks/bookorbit/komodo.toml",
+  "stacks/syncthing/komodo.toml",
+  "stacks/immich/komodo.toml",
+  "stacks/jellyfin/komodo.toml",
+  "stacks/navidrome/komodo.toml",
+  "stacks/adguard/komodo.toml",
+  "stacks/rp/komodo.toml",
+]

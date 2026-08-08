@@ -1,0 +1,51 @@
+name: tandoor
+
+services:
+  db_recipes:
+    image: postgres:16-alpine
+    container_name: tandoor-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /data/config/tandoor/postgresql:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  web_recipes:
+    image: vabene1111/recipes:latest
+    container_name: tandoor
+    restart: unless-stopped
+    depends_on:
+      db_recipes:
+        condition: service_healthy
+    environment:
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+      DB_ENGINE: django.db.backends.postgresql
+      POSTGRES_HOST: db_recipes
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ENABLE_SIGNUP: ${ENABLE_SIGNUP:-0}
+      SOCIAL_PROVIDERS: allauth.socialaccount.providers.openid_connect
+      SOCIALACCOUNT_PROVIDERS: ${SOCIALACCOUNT_PROVIDERS}
+      SOCIALACCOUNT_LOGIN_ON_GET: "1"
+      HIDE_LOGIN_FORM: "1"
+      SOCIALACCOUNT_EMAIL_AUTHENTICATION: "1"
+      SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT: "1"
+    ports:
+      - "8088:80"
+    volumes:
+      - tandoor-staticfiles:/opt/recipes/staticfiles
+      - /data/config/tandoor/mediafiles:/opt/recipes/mediafiles
+
+volumes:
+  tandoor-staticfiles:

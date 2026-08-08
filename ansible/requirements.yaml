@@ -1,0 +1,10 @@
+---
+roles:
+  - name: bpbradley.komodo
+    src: https://github.com/bpbradley/ansible-role-komodo
+    version: main
+collections:
+  - name: community.docker
+  - name: ansible.posix
+  - name: community.general
+  - name: community.sops

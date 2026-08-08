@@ -1,0 +1,107 @@
+# 1) set timezone
+- name: Set timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+# 2) make sure qemu-guest-agent is installed (idempotent; skip on LXCs and the PVE host itself)
+- name: Ensure qemu-guest-agent is installed
+  become: true
+  ansible.builtin.apt:
+    name: qemu-guest-agent
+    state: present
+    update_cache: yes
+  when: ansible_virtualization_type == "kvm"
+
+# 3) ensure the agent is running (so Proxmox can see IPs/shutdown cleanly)
+- name: Ensure qemu-guest-agent is running
+  become: true
+  ansible.builtin.service:
+    name: qemu-guest-agent
+    state: started
+    enabled: yes
+  when: ansible_virtualization_type == "kvm"
+
+- name: Remove retired network interface stanzas
+  become: true
+  ansible.builtin.replace:
+    path: /etc/network/interfaces
+    regexp: "(?m)^auto {{ item | regex_escape }}\\niface {{ item | regex_escape }} inet [^\\n]+\\n(?:[ \\t]+[^\\n]*\\n)*\\n?"
+    replace: ""
+    backup: true
+  loop: "{{ legacy_network_interfaces_to_remove | default([]) }}"
+  tags: [network_cleanup]
+
+# 4) DNS via systemd-resolved if available
+- name: Discover default interface
+  ansible.builtin.set_fact:
+    default_if: "{{ ansible_default_ipv4.interface }}"
+
+- name: Check if resolvectl exists
+  ansible.builtin.stat:
+    path: /usr/bin/resolvectl
+  register: resolvectl_bin
+
+- name: Set DNS servers on default interface
+  become: true
+  ansible.builtin.command: >
+    resolvectl dns {{ default_if }} {{ resolver_dns_servers | join(' ') }}
+  changed_when: false
+  when: resolvectl_bin.stat.exists
+
+- name: Flush resolver caches
+  become: true
+  ansible.builtin.command: resolvectl flush-caches
+  changed_when: false
+  when: resolvectl_bin.stat.exists
+
+# 5) base utilities on every box
+- name: Install baseline packages
+  become: true
+  ansible.builtin.apt:
+    name:
+      - curl
+      - ca-certificates
+      - sudo
+      - unzip
+      - htop
+    state: present
+
+# 6) install SOPS binary (not in apt; download from GitHub releases)
+- name: Check installed SOPS version
+  ansible.builtin.command: sops --version
+  register: sops_installed
+  failed_when: false
+  changed_when: false
+
+- name: Install SOPS
+  become: true
+  ansible.builtin.get_url:
+    url: "https://github.com/getsops/sops/releases/download/v{{ sops_version }}/sops-v{{ sops_version }}.linux.amd64"
+    dest: /usr/local/bin/sops
+    mode: "0755"
+  when: sops_installed.rc != 0 or (sops_version | default('')) not in (sops_installed.stdout | default(''))
+
+# 7) distribute server age key so SOPS can decrypt stack secrets at deploy time
+# Deploy to /etc/sops/age/keys.txt — consistent path regardless of ansible_user,
+# so Komodo periphery (runs as komodo user) can find it without user-specific paths.
+- name: Ensure /etc/sops/age directory exists
+  become: true
+  ansible.builtin.file:
+    path: /etc/sops/age
+    state: directory
+    mode: "0755"
+    owner: root
+
+- name: Write server age private key
+  become: true
+  ansible.builtin.copy:
+    content: "{{ server_age_private_key }}\n"
+    dest: /etc/sops/age/keys.txt
+    mode: "0644"
+    owner: root
+
+- name: Export SOPS_AGE_KEY_FILE in shell profile
+  ansible.builtin.lineinfile:
+    path: "/home/{{ ansible_user }}/.bashrc"
+    line: 'export SOPS_AGE_KEY_FILE=/etc/sops/age/keys.txt'
+    create: yes

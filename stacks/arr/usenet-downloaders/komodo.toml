@@ -1,0 +1,14 @@
+[[stack]]
+name = "usenet-downloaders"
+tags = ["arr"]
+[stack.config]
+server = "apps-vm-1"
+git_account = "flynncs"
+repo = "flynncs/homelab-public"
+branch = "main"
+linked_repo = "homelab"
+poll_for_updates = true
+auto_update = true
+webhook_enabled = true
+webhook_force_deploy = true
+run_directory = "stacks/arr/usenet-downloaders"

@@ -1,0 +1,251 @@
+services:
+  gluetun:
+    image: qmcgaw/gluetun:latest
+    container_name: music-gluetun
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${PROTONVPN_WIREGUARD_PRIVATE_KEY}
+      - SERVER_COUNTRIES=${PROTONVPN_SERVER_COUNTRIES:-Netherlands}
+      - PORT_FORWARD_ONLY=on
+      - VPN_PORT_FORWARDING=on
+      - VPN_PORT_FORWARDING_PROVIDER=protonvpn
+      - HTTP_CONTROL_SERVER_ADDRESS=:8000
+      - HTTP_CONTROL_SERVER_AUTH_DEFAULT_ROLE={"auth":"none"}
+      - FIREWALL_INPUT_PORTS=5030,5031
+    ports:
+      - 5030:5030
+      - 5031:5031
+    restart: unless-stopped
+
+  slskd:
+    image: slskd/slskd:latest
+    container_name: slskd
+    network_mode: service:gluetun
+    depends_on:
+      - gluetun
+    user: 1000:1000
+    environment:
+      - SLSKD_REMOTE_CONFIGURATION=true
+      - SLSKD_USERNAME=${SLSKD_UI_USERNAME}
+      - SLSKD_PASSWORD=${SLSKD_UI_PASSWORD}
+      - SLSKD_API_KEY=${SLSKD_API_KEY}
+      - SLSKD_SLSK_USERNAME=${SOULSEEK_USERNAME}
+      - SLSKD_SLSK_PASSWORD=${SOULSEEK_PASSWORD}
+      - SLSKD_DOWNLOADS_DIR=/data/slskd/complete
+      - SLSKD_INCOMPLETE_DIR=/data/slskd/incomplete
+      - SLSKD_SHARED_DIR=/data/media/music
+      - SLSKD_UMASK=002
+      - SLSKD_VPN=true
+      - SLSKD_VPN_PORT_FORWARDING=true
+      - SLSKD_VPN_GLUETUN_URL=http://localhost:8000
+    volumes:
+      - /data/config/slskd:/app
+      - /mnt/data:/data
+    restart: unless-stopped
+
+  droppedneedle:
+    image: ghcr.io/habirabbu/droppedneedle:latest
+    container_name: droppedneedle
+    depends_on:
+      - slskd
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - PORT=8688
+      - TZ=Etc/UTC
+      - SLSKD_DOWNLOADS_PATH=/slskd-downloads
+    volumes:
+      - /data/config/droppedneedle:/app/config
+      - /data/config/droppedneedle-cache:/app/cache
+      - /mnt/data/media/music:/music:rw
+      - /mnt/data/slskd/complete:/slskd-downloads:rw
+    ports:
+      - 8688:8688
+    restart: unless-stopped
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:nightly
+    container_name: lidarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /data/config/lidarr:/config
+      - /mnt/data:/data
+    ports:
+      - 8686:8686
+    restart: unless-stopped
+
+  explo:
+    image: ghcr.io/lumepart/explo:latest
+    container_name: explo
+    environment:
+      - TZ=Etc/UTC
+      - WEB_UI=true
+      - UI_USERNAME=${EXPLO_UI_USERNAME}
+      - UI_PASSWORD=${EXPLO_UI_PASSWORD}
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - /data/config/explo:/opt/explo/config
+      - /mnt/data/media/music/explo:/data
+      - /mnt/data/slskd:/slskd
+    ports:
+      - 7288:7288
+    restart: unless-stopped
+
+  explo-user-b:
+    image: ghcr.io/lumepart/explo:latest
+    container_name: explo-user-b
+    environment:
+      - TZ=Etc/UTC
+      - WEB_UI=true
+      - UI_USERNAME=${EXPLO_UI_USERNAME}
+      - UI_PASSWORD=${EXPLO_UI_PASSWORD}
+      - LISTENBRAINZ_USER=user-b5
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - /data/config/explo-user-b:/opt/explo/config
+      - /mnt/data/media/music/explo-user-b:/data
+      - /mnt/data/slskd:/slskd
+    ports:
+      - 7289:7288
+    restart: unless-stopped
+
+  aurral:
+    image: ghcr.io/lklynet/aurral:latest
+    container_name: aurral
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - DOWNLOAD_FOLDER=/app/downloads
+      - LIDARR_ALLOW_HTTP=true
+      - M3U_PATH_MODE=remote
+      - M3U_PATH_MAPPINGS=/app/downloads|/music/aurral;/data/media/music|/music
+      - TZ=Etc/UTC
+    volumes:
+      - /data/config/aurral:/app/backend/data
+      - /mnt/data/media/music/aurral:/app/downloads
+      - /mnt/data:/data:ro
+      - /mnt/data/slskd/complete:/data/slskd/complete:rw
+    ports:
+      - 3001:3001
+    restart: unless-stopped
+
+  musicgrabber:
+    image: g33kphr33k/musicgrabber:latest
+    container_name: musicgrabber
+    shm_size: "2gb"
+    environment:
+      - TZ=Etc/UTC
+      - PUID=1000
+      - PGID=1000
+      - MUSIC_DIR=/music
+      - DB_PATH=/config/music_grabber.db
+      - ENABLE_MUSICBRAINZ=true
+      - DEFAULT_CONVERT_TO_FLAC=true
+      - NAVIDROME_URL=http://10.20.0.40:4533
+      - NAVIDROME_USER=${SUBSONIC_ADMIN_USERNAME}
+      - NAVIDROME_PASS=${SUBSONIC_ADMIN_PASSWORD}
+      - SOURCE_SOULSEEK_ENABLED=true
+      - SLSKD_URL=http://gluetun:5030
+      - SLSKD_USER=${SLSKD_UI_USERNAME}
+      - SLSKD_PASS=${SLSKD_UI_PASSWORD}
+      - SLSKD_DOWNLOADS_PATH=/data/slskd/complete
+    volumes:
+      - /data/config/musicgrabber:/config
+      - /mnt/data/media/music:/music
+      - /mnt/data/slskd/complete:/data/slskd/complete
+    ports:
+      - 38274:8080
+    restart: unless-stopped
+
+  soulbeet:
+    image: docker.io/docccccc/soulbeet:latest
+    container_name: soulbeet
+    environment:
+      - DATABASE_URL=sqlite:/data/soulbeet.db
+      - DOWNLOAD_PATH=/data/slskd/complete
+      - SECRET_KEY=${SOULBEET_SECRET_KEY}
+      - NAVIDROME_URL=http://10.20.0.40:4533
+    volumes:
+      - /data/config/soulbeet/data:/data
+      - /mnt/data/media/music:/music
+      - /mnt/data/slskd/complete:/data/slskd/complete
+    ports:
+      - 9765:9765
+    restart: unless-stopped
+
+  koito:
+    image: gabehf/koito:latest
+    container_name: koito
+    environment:
+      - KOITO_SUBSONIC_URL=http://10.20.0.40:4533
+      - KOITO_SUBSONIC_PARAMS=${KOITO_SUBSONIC_PARAMS}
+      - KOITO_DEFAULT_THEME=black
+    volumes:
+      - /data/config/koito:/etc/koito
+    ports:
+      - 4110:4110
+    restart: unless-stopped
+
+  koito-user-b:
+    image: gabehf/koito:latest
+    container_name: koito-user-b
+    environment:
+      - KOITO_SUBSONIC_URL=http://10.20.0.40:4533
+      - KOITO_SUBSONIC_PARAMS=${KOITO_USER_B_SUBSONIC_PARAMS}
+      - KOITO_DEFAULT_THEME=black
+    volumes:
+      - /data/config/koito-user-b:/etc/koito
+    ports:
+      - 4111:4110
+    restart: unless-stopped
+
+  multi-scrobbler:
+    image: foxxmd/multi-scrobbler:latest
+    container_name: multi-scrobbler
+    environment:
+      - TZ=Etc/UTC
+      - BASE_URL=http://10.20.0.51:9078
+      - LISTENBRAINZ_USER_A_TOKEN=${LISTENBRAINZ_USER_A_TOKEN}
+      - LISTENBRAINZ_USER_B_TOKEN=${LISTENBRAINZ_USER_B_TOKEN}
+      - KOITO_USER_A_API_KEY=${KOITO_USER_A_API_KEY}
+      - KOITO_USER_B_API_KEY=${KOITO_USER_B_API_KEY}
+      - LASTFM_USER_A_API_KEY=${LASTFM_USER_A_API_KEY}
+      - LASTFM_USER_A_SECRET=${LASTFM_USER_A_SECRET}
+    volumes:
+      - /data/config/multi-scrobbler:/config
+      - ./multi-scrobbler-config.json:/config/config.json:ro
+    ports:
+      - 9078:9078
+    restart: unless-stopped
+
+  octo-fiesta:
+    image: ghcr.io/v1ck3s/octo-fiesta:latest
+    container_name: octo-fiesta
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - Library__DownloadPath=/app/downloads
+      - Subsonic__Url=http://10.20.0.40:4533
+      - Subsonic__AdminUsername=${SUBSONIC_ADMIN_USERNAME}
+      - Subsonic__AdminPassword=${SUBSONIC_ADMIN_PASSWORD}
+      - Subsonic__MusicService=${OCTO_FIESTA_MUSIC_SERVICE:-SquidWTF}
+      - Subsonic__StorageMode=${OCTO_FIESTA_STORAGE_MODE:-Permanent}
+      - Subsonic__DownloadMode=${OCTO_FIESTA_DOWNLOAD_MODE:-Track}
+      - Deezer__Arl=${DEEZER_ARL:-}
+      - Qobuz__UserAuthToken=${QOBUZ_USER_AUTH_TOKEN:-}
+      - Qobuz__UserId=${QOBUZ_USER_ID:-}
+      - SquidWTF__Source=${SQUIDWTF_SOURCE:-AmazonMusic}
+      - Yandex__OAuthToken=${YANDEX_OAUTH_TOKEN:-}
+    volumes:
+      - /mnt/data/media/music:/app/downloads
+    ports:
+      - 5274:8080
+    restart: unless-stopped

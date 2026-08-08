@@ -1,0 +1,60 @@
+all:
+  hosts:
+    mgmt-vm:
+      ansible_host: 10.20.0.50
+      ansible_user: admin
+    apps-vm-1:
+      ansible_host: 10.20.0.51
+      ansible_user: admin
+    auth-vm-1:
+      ansible_host: 10.20.0.53
+      ansible_user: admin
+    edge-ct:
+      ansible_host: 10.20.0.42
+      ansible_user: root
+    apps-ct:
+      ansible_host: 10.20.0.43
+      ansible_user: root
+    jellyfin-ct:
+      ansible_host: 10.20.0.40
+      ansible_user: root
+    immich-ct:
+      ansible_host: 10.20.0.41
+      ansible_user: root
+    adguard-ct:
+      ansible_host: 10.20.0.44
+      ansible_user: root
+    rp-ct:
+      ansible_host: 10.20.0.45
+      ansible_user: root
+    homelab-pve:
+      ansible_host: 192.0.2.10
+      ansible_user: root
+  children:
+    proxmox_hosts:
+      hosts:
+        homelab-pve: {}
+    mgmt:
+      hosts:
+        mgmt-vm: {}
+    docker_hosts:
+      hosts:
+        apps-vm-1: {}
+        auth-vm-1: {}
+        immich-ct: {}
+        edge-ct: {}
+        apps-ct: {}
+        jellyfin-ct: {}
+        adguard-ct: {}
+        rp-ct: {}
+    baseline:
+      hosts:
+        mgmt-vm: {}
+        apps-vm-1: {}
+        auth-vm-1: {}
+        edge-ct: {}
+        apps-ct: {}
+        jellyfin-ct: {}
+        immich-ct: {}
+        adguard-ct: {}
+        rp-ct: {}

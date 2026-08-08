@@ -1,0 +1,8 @@
+server_age_private_key: replace-me
+komodo_db_username: komodo
+komodo_db_password: replace-me
+komodo_jwt_secret: replace-me
+komodo_init_admin_username: admin
+komodo_init_admin_password: replace-me
+komodo_oidc_client_secret: replace-me
+komodo_webhook_secret: replace-me

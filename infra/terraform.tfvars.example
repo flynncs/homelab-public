@@ -1,0 +1,2 @@
+proxmox_api_token = "terraform@pve!opentofu=replace-me"
+initial_password  = "replace-me"

@@ -1,0 +1,5 @@
+nfs_mounts: []
+
+nfs_default_fstype: nfs
+nfs_default_opts: defaults
+nfs_default_state: mounted

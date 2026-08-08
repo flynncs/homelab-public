@@ -1,0 +1,90 @@
+name: norish
+
+services:
+  app:
+    image: norishapp/norish:latest
+    container_name: norish-app
+    restart: unless-stopped
+    user: "1000:1000"
+    ports:
+      - "8089:3000"
+    environment:
+      NODE_ENV: production
+      AUTH_URL: https://recipes.home.example
+      DATABASE_URL: postgres://norish:${NORISH_DB_PASSWORD}@db:5432/norish
+      MASTER_KEY: ${NORISH_MASTER_KEY:?NORISH_MASTER_KEY is required}
+      CHROME_WS_ENDPOINT: ws://chrome-headless:3000
+      REDIS_URL: redis://redis:6379
+      UPLOADS_DIR: /app/uploads
+      TRUSTED_ORIGINS: https://recipes.home.example,https://recipes.internal.home.example
+      AI_ENABLED: "true"
+      AI_PROVIDER: openai
+      AI_ENDPOINT: https://generativelanguage.googleapis.com/v1beta/openai/
+      AI_MODEL: gemini-3.1-flash-lite
+      AI_API_KEY: ${NORISH_AI_API_KEY:?NORISH_AI_API_KEY is required}
+      PASSWORD_AUTH_ENABLED: "false"
+      OIDC_NAME: Pocket ID
+      OIDC_ISSUER: https://auth.home.example
+      OIDC_CLIENT_ID: ${NORISH_OIDC_CLIENT_ID:?NORISH_OIDC_CLIENT_ID is required}
+      OIDC_CLIENT_SECRET: ${NORISH_OIDC_CLIENT_SECRET:?NORISH_OIDC_CLIENT_SECRET is required}
+      OIDC_WELLKNOWN: https://auth.home.example/.well-known/openid-configuration
+    volumes:
+      - /data/config/norish/uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chrome-headless:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "require(''http'').get(''http://localhost:3000/api/v1/health'', r => process.exit(r.statusCode===200?0:1))"',
+        ]
+      interval: 1m
+      timeout: 15s
+      retries: 3
+      start_period: 1m
+
+  db:
+    image: postgres:17-alpine
+    container_name: norish-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: norish
+      POSTGRES_PASSWORD: ${NORISH_DB_PASSWORD:?NORISH_DB_PASSWORD is required}
+      POSTGRES_DB: norish
+    volumes:
+      - /data/config/norish/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  chrome-headless:
+    image: zenika/alpine-chrome:latest
+    container_name: norish-chrome
+    restart: unless-stopped
+    command:
+      - "--no-sandbox"
+      - "--disable-gpu"
+      - "--disable-dev-shm-usage"
+      - "--remote-debugging-address=0.0.0.0"
+      - "--remote-debugging-port=3000"
+      - "--headless"
+
+  redis:
+    image: redis:8.4.0
+    container_name: norish-redis
+    restart: unless-stopped
+    volumes:
+      - /data/config/norish/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

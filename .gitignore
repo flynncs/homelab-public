@@ -1,0 +1,12 @@
+.DS_Store
+.terraform/
+.tofu/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+*.env
+.env*
+!.env.example
+ansible/group_vars/all/vault.yaml
+node_modules/

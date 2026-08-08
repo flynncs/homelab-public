@@ -1,0 +1,81 @@
+- name: Ensure Docker & compose plugin exist
+  import_role:
+    name: docker
+
+- name: Create Komodo directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - /opt/komodo
+    - /opt/komodo/backups
+
+- name: Download official Komodo compose (Mongo flavour)
+  get_url:
+    url: "https://raw.githubusercontent.com/moghtech/komodo/main/compose/mongo.compose.yaml"
+    dest: /opt/komodo/docker-compose.yaml
+    mode: "0644"
+    force: true
+  when: komodo_force_update_compose | default(false)
+
+- name: Write compose.env
+  copy:
+    dest: /opt/komodo/compose.env
+    mode: "0600"
+    content: |
+      # --- compose substitution variables ---
+      COMPOSE_KOMODO_IMAGE_TAG={{ komodo_core_image_tag | default('2') }}
+      COMPOSE_KOMODO_BACKUPS_PATH=/opt/komodo/backups
+
+      # --- Core ---
+      KOMODO_HOST={{ komodo_public_url }}
+      KOMODO_TITLE=Komodo
+      TZ={{ timezone }}
+
+      # --- Database ---
+      KOMODO_DATABASE_ADDRESS=mongo:27017
+      KOMODO_DATABASE_USERNAME={{ komodo_db_username }}
+      KOMODO_DATABASE_PASSWORD={{ komodo_db_password }}
+      KOMODO_DB_USERNAME={{ komodo_db_username }}
+      KOMODO_DB_PASSWORD={{ komodo_db_password }}
+
+      # --- Auth ---
+      KOMODO_LOCAL_AUTH={{ komodo_local_auth | default(true) | lower }}
+      KOMODO_JWT_SECRET={{ komodo_jwt_secret }}
+      KOMODO_JWT_TTL={{ komodo_jwt_ttl | default('1-day') }}
+      KOMODO_INIT_ADMIN_USERNAME={{ komodo_init_admin_username }}
+      KOMODO_INIT_ADMIN_PASSWORD={{ komodo_init_admin_password }}
+
+      # --- OIDC (pocket-id) ---
+      KOMODO_OIDC_ENABLED={{ komodo_oidc_enabled | default(false) | lower }}
+      KOMODO_OIDC_PROVIDER={{ komodo_oidc_provider | default('') }}
+      KOMODO_OIDC_CLIENT_ID={{ komodo_oidc_client_id | default('') }}
+      KOMODO_OIDC_CLIENT_SECRET={{ komodo_oidc_client_secret | default('') }}
+
+      # --- Webhooks ---
+      KOMODO_WEBHOOK_SECRET={{ komodo_webhook_secret }}
+
+      # --- Polling ---
+      KOMODO_MONITORING_INTERVAL={{ komodo_monitoring_interval | default('15-sec') }}
+      KOMODO_RESOURCE_POLL_INTERVAL={{ komodo_resource_poll_interval | default('1-hr') }}
+
+- name: Pull Komodo images
+  community.docker.docker_compose_v2_pull:
+    project_src: /opt/komodo
+    env_files:
+      - /opt/komodo/compose.env
+
+- name: Compose up Komodo Core
+  community.docker.docker_compose_v2:
+    project_src: /opt/komodo
+    env_files:
+      - /opt/komodo/compose.env
+    state: present
+
+- name: Allow Komodo port through UFW
+  ufw:
+    rule: allow
+    port: "{{ komodo_core_port }}"
+    proto: tcp
+  ignore_errors: true

@@ -1,0 +1,13 @@
+all:
+  hosts:
+    management:
+      ansible_host: 10.20.0.20
+      ansible_user: admin
+    apps:
+      ansible_host: 10.20.0.21
+      ansible_user: root
+  children:
+    docker_hosts:
+      hosts:
+        management: {}
+        apps: {}

@@ -1,0 +1,5 @@
+# nfs.yaml
+- hosts: apps-vm-1,mgmt-vm
+  become: true
+  roles:
+    - nfs_mount

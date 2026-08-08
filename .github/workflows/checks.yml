@@ -1,0 +1,35 @@
+name: checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run check:routes
+
+      - name: validate compose files
+        run: |
+          for file in $(find stacks -name compose.yaml | sort); do
+            docker compose -f "$file" config --no-interpolate --quiet
+          done
+
+      - uses: opentofu/setup-opentofu@v1
+      - run: tofu fmt -check -recursive
+      - run: tofu -chdir=infra init -backend=false
+      - run: tofu -chdir=infra validate

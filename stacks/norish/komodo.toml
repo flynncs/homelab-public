@@ -1,0 +1,15 @@
+[[stack]]
+name = "norish"
+tags = ["apps", "recipes"]
+[stack.config]
+server = "apps-ct"
+git_account = "flynncs"
+repo = "flynncs/homelab-public"
+branch = "main"
+linked_repo = "homelab"
+poll_for_updates = true
+auto_update = true
+webhook_enabled = true
+webhook_force_deploy = true
+run_directory = "stacks/norish"
+compose_cmd_wrapper_include = ["config", "build", "pull", "up"]

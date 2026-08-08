@@ -1,0 +1,41 @@
+services:
+  pihole:
+    image: pihole/pihole:2026.07.2
+    container_name: pihole
+    hostname: pihole
+    restart: unless-stopped
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "80:80/tcp"
+    environment:
+      TZ: Etc/UTC
+      FTLCONF_webserver_api_password: ${PIHOLE_WEBPASSWORD}
+      FTLCONF_webserver_domain: pihole.internal.home.example
+      FTLCONF_dns_listeningMode: ALL
+      FTLCONF_dns_upstreams: 9.9.9.10;149.112.112.10
+      FTLCONF_dns_dnssec: "true"
+      FTLCONF_dns_EDNS0ECS: "true"
+      FTLCONF_dns_queryLogging: "true"
+      FTLCONF_ntp_ipv4_active: "false"
+      FTLCONF_ntp_ipv6_active: "false"
+      FTLCONF_ntp_sync_active: "false"
+      # Pi-hole attributes requests using ECS from the trusted Proxmox
+      # forwarder, then removes ECS before sending queries to Quad9.
+      FTLCONF_misc_dnsmasq_lines: |-
+        strip-subnet
+        address=/pangolin.home.example/198.51.100.20
+        address=/internal.home.example/192.0.2.10
+        address=/home.example/192.0.2.10
+        local=/internal.home.example/
+        local=/home.example/
+    volumes:
+      - /data/config/pihole:/etc/pihole
+    cap_add:
+      - SYS_NICE
+    networks:
+      - default
+
+networks:
+  default:
+    name: piholenet

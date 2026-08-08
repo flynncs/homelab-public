@@ -1,0 +1,25 @@
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: UTC
+    ports:
+      - "8096:8096"
+    volumes:
+      - "${CONFIG_ROOT}/jellyfin:/config"
+      - "${MEDIA_ROOT}:/media:ro"
+    restart: unless-stopped
+
+  navidrome:
+    image: deluan/navidrome:latest
+    environment:
+      ND_MUSICFOLDER: /music
+      TZ: UTC
+    ports:
+      - "4533:4533"
+    volumes:
+      - "${CONFIG_ROOT}/navidrome:/data"
+      - "${MEDIA_ROOT}/music:/music:ro"
+    restart: unless-stopped

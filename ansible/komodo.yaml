@@ -1,0 +1,29 @@
+---
+# Komodo v1 → v2 upgrade — run steps in order:
+#
+# 1. Back up mgmt-vm Mongo before touching Core:
+#      ssh admin@10.20.0.50 'docker exec -t komodo-mongo-1 mongodump --archive' > komodo-mongo-$(date +%Y%m%d).bak
+#
+# 2. Upgrade Core (re-downloads compose for v2, updates compose.env, pulls :2 images):
+#      ansible-playbook komodo.yaml --limit mgmt -e komodo_force_update_compose=true
+#
+# 3. Verify Core is healthy: https://komodo.home.example — check logs if not:
+#      ssh admin@10.20.0.50 'docker logs komodo-core-1 --tail 50'
+#
+# 4. Upgrade periphery on remaining hosts (outbound mode; auto-pins Core's Ed25519 key):
+#      ansible-playbook komodo.yaml --limit docker_hosts
+#
+# 5. In Komodo UI: confirm auth/apps/immich reconnect. If servers still show the old
+#    inbound address (http://10.20.0.xxx:8120), update them to the new outbound connection.
+
+- name: Komodo Core on mgmt
+  hosts: mgmt
+  become: true
+  roles:
+    - komodo_core_compose
+
+- name: Komodo Periphery on docker hosts
+  hosts: docker_hosts
+  become: true
+  roles:
+    - bpbradley.komodo

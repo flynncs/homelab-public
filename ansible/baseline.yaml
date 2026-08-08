@@ -1,0 +1,16 @@
+- name: Baseline setup on all hosts
+  hosts: baseline
+  gather_facts: yes
+  become: true
+
+  roles:
+    - baseline
+    - apt_maintenance
+
+- name: Automatic package maintenance on Proxmox
+  hosts: proxmox_hosts
+  gather_facts: yes
+  become: true
+
+  roles:
+    - apt_maintenance

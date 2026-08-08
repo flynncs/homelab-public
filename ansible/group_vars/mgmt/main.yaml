@@ -1,0 +1,7 @@
+komodo_oidc_enabled: true
+komodo_oidc_provider: "https://auth.home.example"
+komodo_oidc_client_id: "00000000-0000-4000-8000-000000000000"
+komodo_local_auth: true
+komodo_jwt_ttl: "1-day"
+komodo_monitoring_interval: "15-sec"
+komodo_resource_poll_interval: "1-hr"

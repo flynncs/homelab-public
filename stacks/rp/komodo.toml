@@ -1,0 +1,16 @@
+[[stack]]
+name = "rp"
+[stack.config]
+server = "rp-ct"
+git_account = "flynncs"
+repo = "flynncs/homelab-public"
+branch = "main"
+linked_repo = "homelab"
+poll_for_updates = true
+auto_update = true
+webhook_enabled = true
+webhook_force_deploy = true
+run_directory = "stacks/rp"
+extra_args = ["--force-recreate"]
+config_files = [{ path = "Caddyfile", services = ["caddy"], requires = "Restart" }]
+compose_cmd_wrapper_include = ["config", "build", "pull", "up"]

@@ -1,0 +1,26 @@
+- name: Ensure NFS client tools installed
+  apt:
+    name: nfs-common
+    state: present
+    update_cache: yes
+  become: true
+
+- name: Ensure mount points exist
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ nfs_mounts }}"
+  when: nfs_mounts | length > 0
+  become: true
+
+- name: Configure and mount NFS shares
+  ansible.posix.mount:
+    path: "{{ item.path }}"
+    src: "{{ item.src }}"
+    fstype: "{{ item.fstype | default('nfs') }}"
+    opts: "{{ item.opts | default('defaults') }}"
+    state: "{{ item.state | default('mounted') }}"
+  loop: "{{ nfs_mounts }}"
+  when: nfs_mounts | length > 0
+  become: true

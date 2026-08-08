@@ -1,0 +1,4 @@
+---
+- import_playbook: baseline.yaml
+- import_playbook: docker.yaml
+- import_playbook: komodo.yaml

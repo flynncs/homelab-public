@@ -1,0 +1,285 @@
+caddy:
+  acme_dns: cloudflare {env.CLOUDFLARE_API_TOKEN}
+
+dns:
+  lan_dns: 192.0.2.10
+  tailscale_dns: 100.64.0.10
+  carveouts:
+    - domain: pangolin.home.example
+      answer: 198.51.100.20
+      note: remote VPS; bypasses local Caddy
+  wildcards:
+    - domain: "*.home.example"
+      answer: 192.0.2.10
+      note: Proxmox LAN IP; host DNAT forwards :80/:443 to rp-ct
+    - domain: "*.internal.home.example"
+      answer: 192.0.2.10
+      note: Proxmox LAN IP; host DNAT forwards :80/:443 to rp-ct
+
+entrypoints:
+  proxmox_lan:
+    interface: eth0
+    address: 192.0.2.10
+    dns_answer: 192.0.2.10
+    # DNS terminates on a dedicated dnsmasq listener at this address. It is
+    # forwarded to Pi-hole in userspace rather than DNATed across vmbr0.
+    forward_dns: false
+    forward_web: true
+  proxmox_tailscale:
+    interface: tailscale0
+    address: 100.64.0.10
+    dns_answer: 100.64.0.10
+    forward_dns: false
+    forward_web: true
+  internal:
+    dns_target:
+      host: adguard-ct
+      tcp_port: 53
+      udp_port: 53
+    web_target:
+      host: rp-ct
+      tcp_ports:
+        - 80
+        - 443
+      udp_ports:
+        - 443
+
+services:
+  - name: jellyfin
+    upstream_host: jellyfin-ct
+    upstream_port: 8096
+    public_hosts:
+      - jelly.home.example
+    internal_hosts:
+      - jelly.internal.home.example
+    external: true
+    caddy:
+      flush_interval: "-1"
+
+  - name: navidrome
+    upstream_host: jellyfin-ct
+    upstream_port: 4533
+    public_hosts:
+      - music.home.example
+    internal_hosts:
+      - music.internal.home.example
+    external: true
+
+  - name: requests
+    upstream_host: apps-vm-1
+    upstream_port: 5055
+    public_hosts:
+      - requests.home.example
+    external: true
+
+  - name: photos
+    upstream_host: immich-ct
+    upstream_port: 2283
+    public_hosts:
+      - photos.home.example
+    internal_hosts:
+      - photos.internal.home.example
+    external: true
+
+  - name: auth
+    upstream_host: auth-vm-1
+    upstream_port: 3055
+    public_hosts:
+      - auth.home.example
+    external: true
+
+  - name: recipes
+    upstream_host: apps-ct
+    upstream_port: 8089
+    public_hosts:
+      - recipes.home.example
+    internal_hosts:
+      - recipes.internal.home.example
+    external: true
+    caddy:
+      headers:
+        - header_up Host {host}
+        - header_up X-Forwarded-Proto {scheme}
+
+  - name: droppedneedle
+    upstream_host: apps-vm-1
+    upstream_port: 8688
+    public_hosts:
+      - groove.home.example
+    internal_hosts:
+      - droppedneedle.internal.home.example
+    external: true
+
+  - name: octo-fiesta
+    upstream_host: apps-vm-1
+    upstream_port: 5274
+    public_hosts:
+      - octo.music.home.example
+    internal_hosts:
+      - octo-fiesta.internal.home.example
+    external: true
+
+  - name: proxmox
+    upstream: https://10.20.0.1:8006
+    public_hosts:
+      - proxmox.home.example
+    internal_hosts:
+      - proxmox.internal.home.example
+    external: true
+    caddy:
+      tls_insecure_skip_verify: true
+      headers:
+        - header_up Host {upstream_hostport}
+
+  - name: komodo
+    upstream_host: mgmt-vm
+    upstream_port: 9120
+    public_hosts:
+      - komodo.home.example
+    internal_hosts:
+      - komodo.internal.home.example
+    external: true
+
+  - name: lldap
+    upstream_host: auth-vm-1
+    upstream_port: 17170
+    public_hosts:
+      - lldap.home.example
+    internal_hosts:
+      - lldap.internal.home.example
+    external: true
+
+  - name: sonarr
+    upstream_host: apps-vm-1
+    upstream_port: 8989
+    internal_hosts:
+      - sonarr.internal.home.example
+
+  - name: radarr
+    upstream_host: apps-vm-1
+    upstream_port: 7878
+    internal_hosts:
+      - radarr.internal.home.example
+
+  - name: cleanuparr
+    upstream_host: apps-vm-1
+    upstream_port: 11011
+    internal_hosts:
+      - cleanuparr.internal.home.example
+
+  - name: lidarr
+    upstream_host: apps-vm-1
+    upstream_port: 8686
+    internal_hosts:
+      - lidarr.internal.home.example
+
+  - name: slskd
+    upstream_host: apps-vm-1
+    upstream_port: 5030
+    internal_hosts:
+      - slskd.internal.home.example
+
+  - name: explo
+    upstream_host: apps-vm-1
+    upstream_port: 7288
+    internal_hosts:
+      - explo.internal.home.example
+
+  - name: explo-user-b
+    upstream_host: apps-vm-1
+    upstream_port: 7289
+    internal_hosts:
+      - explo-user-b.internal.home.example
+
+  - name: aurral
+    upstream_host: apps-vm-1
+    upstream_port: 3001
+    internal_hosts:
+      - aurral.internal.home.example
+
+  - name: musicgrabber
+    upstream_host: apps-vm-1
+    upstream_port: 38274
+    internal_hosts:
+      - musicgrabber.internal.home.example
+
+  - name: soulbeet
+    upstream_host: apps-vm-1
+    upstream_port: 9765
+    internal_hosts:
+      - soulbeet.internal.home.example
+
+  - name: koito
+    upstream_host: apps-vm-1
+    upstream_port: 4110
+    internal_hosts:
+      - koito.internal.home.example
+
+  - name: koito-user-b
+    upstream_host: apps-vm-1
+    upstream_port: 4111
+    internal_hosts:
+      - koito-user-b.internal.home.example
+
+  - name: multi-scrobbler
+    upstream_host: apps-vm-1
+    upstream_port: 9078
+    internal_hosts:
+      - multi-scrobbler.internal.home.example
+
+  - name: prowlarr
+    upstream_host: apps-vm-1
+    upstream_port: 9696
+    internal_hosts:
+      - prowlarr.internal.home.example
+
+  - name: sabnzbd
+    upstream_host: apps-vm-1
+    upstream_port: 8181
+    internal_hosts:
+      - sabnzbd.internal.home.example
+
+  - name: qbittorrent
+    upstream_host: apps-vm-1
+    upstream_port: 8080
+    internal_hosts:
+      - qbittorrent.internal.home.example
+
+  - name: bentopdf
+    upstream_host: apps-ct
+    upstream_port: 3000
+    internal_hosts:
+      - bentopdf.internal.home.example
+
+  - name: bookorbit
+    upstream_host: apps-vm-1
+    upstream_port: 3000
+    public_hosts:
+      - books.home.example
+    internal_hosts:
+      - books.internal.home.example
+    external: true
+
+  - name: pihole
+    upstream_host: adguard-ct
+    upstream_port: 80
+    internal_hosts:
+      - pihole.internal.home.example
+
+  - name: tinyauth
+    upstream_host: auth-vm-1
+    upstream_port: 3001
+    internal_hosts:
+      - tinyauth.internal.home.example
+
+  - name: profilarr
+    upstream_host: apps-vm-1
+    upstream_port: 6868
+    internal_hosts:
+      - profilarr.internal.home.example
+
+  - name: syncthing
+    upstream_host: mgmt-vm
+    upstream_port: 8384
+    internal_hosts:
+      - syncthing.internal.home.example

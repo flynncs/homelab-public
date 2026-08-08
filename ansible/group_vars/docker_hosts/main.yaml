@@ -1,0 +1,2 @@
+komodo_action: "install"
+komodo_server_enabled: false  # outbound mode — periphery connects to Core via WebSocket

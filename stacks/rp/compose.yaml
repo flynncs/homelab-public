@@ -1,0 +1,23 @@
+services:
+  caddy:
+    image: ghcr.io/caddybuilds/caddy-cloudflare:latest
+    container_name: caddy
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80/tcp"
+      - "443:443/tcp"
+      - "443:443/udp"  # HTTP/3
+    environment:
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /data/config/caddy/data:/data
+      - /data/config/caddy/config:/config
+    networks:
+      - default
+
+networks:
+  default:
+    name: rpnet

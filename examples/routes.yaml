@@ -1,0 +1,14 @@
+services:
+  - name: media
+    upstream_host: apps
+    upstream_port: 8096
+    public_hosts:
+      - media.home.example
+    external: true
+
+  - name: admin
+    upstream_host: management
+    upstream_port: 9000
+    internal_hosts:
+      - admin.internal.home.example
+    external: false

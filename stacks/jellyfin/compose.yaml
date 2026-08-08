@@ -1,0 +1,21 @@
+services:
+  jellyfin:
+    image: lscr.io/linuxserver/jellyfin:latest
+    container_name: jellyfin
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - JELLYFIN_CONFIG_DIR=/config
+      - JELLYFIN_DATA_DIR=/data
+    volumes:
+      - /opt/jellyfin/config:/config
+      - /opt/jellyfin/data:/data
+      # Must be writable for Jellyfin API-triggered deletes, including Maintainerr cleanup.
+      - /mnt/media:/media
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - 8096:8096
+      - 8920:8920
+    restart: unless-stopped

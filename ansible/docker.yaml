@@ -1,0 +1,7 @@
+- name: Setup Docker on docker hosts
+  hosts: docker_hosts
+  gather_facts: yes
+  become: true
+
+  roles:
+    - docker

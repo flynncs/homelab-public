@@ -1,0 +1,2 @@
+legacy_network_interfaces_to_remove:
+  - eth1

@@ -1,0 +1,19 @@
+services:
+  navidrome:
+    image: deluan/navidrome:latest
+    container_name: navidrome
+    user: 1000:1000
+    environment:
+      ND_LOGLEVEL: info
+      ND_SCANSCHEDULE: 1h
+      ND_SESSIONTIMEOUT: 24h
+      ND_LISTENBRAINZ_ENABLED: "true"
+      ND_LISTENBRAINZ_BASEURL: http://10.20.0.51:9078/1/
+      ND_SUBSONIC_DEFAULTREPORTREALPATH: "true"
+      TZ: Etc/UTC
+    volumes:
+      - /opt/navidrome/data:/data
+      - /mnt/media/music:/music:ro
+    ports:
+      - 4533:4533
+    restart: unless-stopped

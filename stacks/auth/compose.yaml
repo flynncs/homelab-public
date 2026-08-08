@@ -1,0 +1,62 @@
+services:
+  lldap:
+    image: lldap/lldap:latest
+    container_name: lldap
+    restart: unless-stopped
+    ports:
+      - "3890:3890" # LDAP
+      - "17170:17170" # Web UI
+    environment:
+      LLDAP_LDAP_BASE_DN: ${LDAP_BASE_DN}
+      LLDAP_LDAP_USER_PASS: ${LLDAP_ADMIN_PASS}
+      LLDAP_JWT_SECRET: ${LLDAP_JWT_SECRET}
+    volumes:
+      - /data/config/lldap:/data
+    networks:
+      - authnet
+  pocket-id:
+    image: ghcr.io/pocket-id/pocket-id:latest
+    container_name: pocket-id
+    restart: unless-stopped
+    ports:
+      - "3055:1411"
+    environment:
+      APP_URL: ${POCKETID_APP_URL}
+      TRUST_PROXY: "true"
+      ENCRYPTION_KEY: ${POCKETID_ENCRYPTION_KEY}
+    volumes:
+      - /data/config/pocketid:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://localhost:1411/healthz >/dev/null 2>&1 || exit 1",
+        ]
+      interval: 90s
+      timeout: 5s
+      retries: 3
+    networks:
+      - authnet
+  tinyauth:
+    image: ghcr.io/steveiliop56/tinyauth:latest
+    container_name: tinyauth
+    restart: unless-stopped
+    ports:
+      - "3001:3000"
+    environment:
+      TINYAUTH_APPURL: ${TINYAUTH_APP_URL}
+      TINYAUTH_LDAP_ADDRESS: ldap://lldap:3890
+      TINYAUTH_LDAP_BASEDN: ${LDAP_BASE_DN}
+      TINYAUTH_LDAP_BINDDN: ${LDAP_BIND_DN}
+      TINYAUTH_LDAP_BINDPASSWORD: ${LLDAP_ADMIN_PASS}
+      TINYAUTH_LDAP_SEARCHFILTER: (uid=%s)
+    depends_on:
+      - lldap
+      - pocket-id
+    volumes:
+      - /data/config/tinyauth:/data
+    networks:
+      - authnet
+networks:
+  authnet:
+    name: authnet

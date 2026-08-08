@@ -1,0 +1,84 @@
+{
+  "disableWeb": false,
+  "sources": [
+    {
+      "type": "endpointlz",
+      "name": "navidrome-user-a",
+      "id": "navidrome-user-a",
+      "enable": true,
+      "clients": ["listenbrainz-user-a", "koito-user-a", "lastfm-user-a"],
+      "data": {
+        "token": "[[LISTENBRAINZ_USER_A_TOKEN]]",
+        "username": "user-a"
+      }
+    },
+    {
+      "type": "endpointlz",
+      "name": "navidrome-user-b",
+      "id": "navidrome-user-b",
+      "enable": true,
+      "clients": ["listenbrainz-user-b", "koito-user-b"],
+      "data": {
+        "token": "[[LISTENBRAINZ_USER_B_TOKEN]]",
+        "username": "user-b"
+      }
+    }
+  ],
+  "clients": [
+    {
+      "type": "listenbrainz",
+      "name": "listenbrainz-user-a",
+      "id": "listenbrainz-user-a",
+      "enable": true,
+      "data": {
+        "token": "[[LISTENBRAINZ_USER_A_TOKEN]]",
+        "username": "user-a",
+        "url": "https://api.listenbrainz.org"
+      }
+    },
+    {
+      "type": "listenbrainz",
+      "name": "listenbrainz-user-b",
+      "id": "listenbrainz-user-b",
+      "enable": true,
+      "data": {
+        "token": "[[LISTENBRAINZ_USER_B_TOKEN]]",
+        "username": "user-b5",
+        "url": "https://api.listenbrainz.org"
+      }
+    },
+    {
+      "type": "koito",
+      "name": "koito-user-a",
+      "id": "koito-user-a",
+      "enable": true,
+      "data": {
+        "token": "[[KOITO_USER_A_API_KEY]]",
+        "username": "user-a",
+        "url": "http://koito:4110"
+      }
+    },
+    {
+      "type": "koito",
+      "name": "koito-user-b",
+      "id": "koito-user-b",
+      "enable": true,
+      "data": {
+        "token": "[[KOITO_USER_B_API_KEY]]",
+        "username": "user-b",
+        "url": "http://koito-user-b:4110"
+      }
+    },
+    {
+      "type": "lastfm",
+      "name": "lastfm-user-a",
+      "id": "lastfm-user-a",
+      "enable": true,
+      "data": {
+        "apiKey": "[[LASTFM_USER_A_API_KEY]]",
+        "secret": "[[LASTFM_USER_A_SECRET]]",
+        "redirectUri": "http://10.20.0.51:9078/lastfm/callback"
+      }
+    }
+  ]
+}
